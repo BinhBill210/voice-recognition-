@@ -9,8 +9,11 @@ conda activate voice-recognition
 # 2. Test (30 giây)
 python test_imports.py
 
-# 3. Train (10-15 phút)
-python run_pipeline.py --quick
+# 3. Train (10-15 phút) - Dùng safe_run để tránh mutex lock error
+python safe_run.py --quick
+
+# Hoặc nếu muốn chạy trực tiếp:
+# python run_pipeline.py --quick
 ```
 
 ---
@@ -27,11 +30,14 @@ python run_pipeline.py --quick
 
 ### Training
 ```bash
-# Quick (10 epochs)
-python run_pipeline.py --quick
+# Quick (10 epochs) - KHUYẾN NGHỊ dùng safe_run trên macOS
+python safe_run.py --quick
 
 # Full (50 epochs)
-python run_pipeline.py --epochs 50
+python safe_run.py --epochs 50
+
+# Hoặc chạy trực tiếp (có thể thấy mutex warnings):
+# python run_pipeline.py --quick
 ```
 
 ### Testing
@@ -97,7 +103,14 @@ python -c "import sys; sys.path.append('src'); from config import AUDIO_WAV_DIR;
 
 ### Lỗi: TensorFlow mutex lock (macOS)
 ```bash
+# Giải pháp 1: Dùng safe wrapper (KHUYẾN NGHỊ)
+python safe_run.py --quick
+
+# Giải pháp 2: Set environment variables
 NUMBA_CACHE_DIR=/tmp python run_pipeline.py --quick
+
+# Giải pháp 3: Ignore warnings (không ảnh hưởng chức năng)
+# Lỗi "[mutex.cc : 452] RAW: Lock blocking" là bình thường trên macOS
 ```
 
 ---

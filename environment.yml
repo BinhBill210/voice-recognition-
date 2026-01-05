@@ -1,0 +1,46 @@
+name: voice-recognition
+
+channels:
+  - conda-forge
+  - defaults
+
+dependencies:
+  # Python
+  - python=3.9
+
+  # Core ML and Deep Learning
+  - tensorflow=2.15.0
+  - numpy=1.24.3
+  - scipy=1.11.1
+
+  # Data Processing
+  - pandas=2.0.3
+  - scikit-learn=1.3.0
+
+  # Audio Processing
+  - librosa=0.10.1
+  - soundfile=0.12.1
+  - audioread=3.0.0
+
+  # Visualization
+  - matplotlib=3.7.2
+  - seaborn=0.12.2
+
+  # Jupyter
+  - jupyter=1.0.0
+  - ipykernel=6.25.0
+  - notebook=7.0.2
+
+  # Utilities
+  - tqdm=4.65.0
+
+  # Web Framework
+  - streamlit=1.28.0
+
+  # Pip packages (không có sẵn trên conda)
+  - pip
+  - pip:
+    - pyaudio==0.2.14
+    - numba==0.58.1
+    - resampy==0.4.2
+
