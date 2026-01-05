@@ -478,16 +478,32 @@ python run_pipeline.py --quick --batch-size 16
 python safe_run.py --quick --batch-size 8
 ```
 
-### ❌ Streamlit Demo Crashes
+### ❌ Streamlit Demo Crashes (macOS mutex lock)
+
+**Lỗi:** `mutex lock failed: Invalid argument`
+
+**Giải pháp:**
 
 ```bash
-# Kill all Python processes
-pkill -9 python
+# Cách 1: Dùng wrapper script (KHUYẾN NGHỊ)
+./run_demo.sh
 
-# Restart terminal
-conda activate voice-recognition
+# Cách 2: Set environment variable
+export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES
 streamlit run demo/app.py
+
+# Cách 3: One-liner
+OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES streamlit run demo/app.py
 ```
+
+**Nếu vẫn lỗi:**
+```bash
+# Kill processes và restart
+pkill -9 python
+# Restart terminal, rồi chạy lại
+```
+
+**Chi tiết:** Xem `STREAMLIT_MACOS_FIX.md`
 
 ---
 
