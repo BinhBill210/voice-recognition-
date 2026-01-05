@@ -8,6 +8,9 @@ import os
 os.environ['NUMBA_CACHE_DIR'] = '/tmp'
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
+os.environ['OMP_NUM_THREADS'] = '1'
+os.environ['OPENBLAS_NUM_THREADS'] = '1'
+os.environ['MKL_NUM_THREADS'] = '1'
 
 import streamlit as st
 import sys
@@ -74,14 +77,18 @@ st.markdown("""
 @st.cache_resource
 def load_model():
     """Load the trained model (cached)."""
-    # Lazy import to avoid loading TensorFlow at startup
-    from predict import EmotionPredictor as EP
-    
-    model_files = list(FINAL_MODELS_DIR.glob('*.keras'))
-    if not model_files:
+    try:
+        # Lazy import to avoid loading TensorFlow at startup
+        from predict import EmotionPredictor as EP
+        
+        model_files = list(FINAL_MODELS_DIR.glob('*.keras'))
+        if not model_files:
+            return None
+        latest_model = max(model_files, key=lambda p: p.stat().st_mtime)
+        return EP(latest_model)
+    except Exception as e:
+        st.error(f"Error loading model: {e}")
         return None
-    latest_model = max(model_files, key=lambda p: p.stat().st_mtime)
-    return EP(latest_model)
 
 
 def plot_probabilities(probabilities: dict) -> plt.Figure:
