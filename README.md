@@ -8,6 +8,41 @@ Dự án nhận diện cảm xúc từ giọng nói sử dụng Deep Learning v�
 
 ---
 
+## 🚀 QUICK START - Chạy ngay (3 bước)
+
+```bash
+# 1. Clone repository
+git clone https://github.com/BinhBill210/voice-recognition-.git
+cd voice-recognition-
+
+# 2. Tạo environment và cài đặt
+conda env create -f environment.yml
+conda activate voice-recognition
+
+# 3. Chạy test và training
+python test_imports.py
+python safe_run.py --quick  # 10 epochs, ~10-15 phút
+```
+
+**Hoặc với pip:**
+```bash
+pip install -r requirements.txt
+python run_pipeline.py --quick
+```
+
+### ⚡ Commands cơ bản
+
+| Task | Command |
+|------|---------|
+| **Test imports** | `python test_imports.py` |
+| **Quick training** | `python safe_run.py --quick` |
+| **Full training** | `python safe_run.py --epochs 50` |
+| **Prediction** | `python src/predict.py audio.wav` |
+| **Web demo** | `streamlit run demo/app.py` |
+| **Recording** | `python src/record.py` |
+
+---
+
 ## 📋 Mục lục
 
 - [Giới thiệu](#-giới-thiệu)
@@ -17,8 +52,7 @@ Dự án nhận diện cảm xúc từ giọng nói sử dụng Deep Learning v�
 - [Sử dụng](#-sử-dụng)
 - [Cấu trúc Project](#-cấu-trúc-project)
 - [API Documentation](#-api-documentation)
-- [Kết quả](#-kết-quả)
-- [Demo](#-demo)
+- [Troubleshooting](#-troubleshooting)
 - [Roadmap](#-roadmap)
 
 ---
@@ -51,287 +85,199 @@ Project này xây dựng một hệ thống **nhận diện cảm xúc từ gi�
 
 ### CREMA-D (Crowd-sourced Emotional Multimodal Actors Dataset)
 
-- **Tổng số files**: 7,442 audio clips
-- **Format**: WAV files (16-bit, mono)
-- **Nguồn**: 91 diễn viên (48 nam, 43 nữ)
-- **Độ dài**: Khoảng 3 seconds mỗi file
-- **Sample rate**: 16kHz (được resample lên 22.05kHz)
+- **📦 Files:** 7,442 audio clips
+- **🎭 Emotions:** 6 classes (ANG, HAP, SAD, NEU, DIS, FEA)
+- **👥 Speakers:** 91 actors (48 male, 43 female)
+- **🎚️ Format:** WAV, 16kHz
+- **⏱️ Duration:** ~2-3 seconds per clip
 
-#### Phân bố cảm xúc
-
-| Emotion | Số lượng | Tỷ lệ |
-|---------|----------|-------|
-| ANG     | 1,271    | 17.08% |
-| HAP     | 1,271    | 17.08% |
-| SAD     | 1,271    | 17.08% |
-| NEU     | 1,087    | 14.61% |
-| DIS     | 1,271    | 17.08% |
-| FEA     | 1,271    | 17.08% |
-
-#### Format tên file
-
-```
-{ActorID}_{SentenceID}_{Emotion}_{EmotionLevel}.wav
-```
+**Tên file format:** `ActorID_Sentence_Emotion_Intensity.wav`
 
 Ví dụ: `1001_DFA_ANG_XX.wav`
 - `1001`: Actor ID
-- `DFA`: Sentence ID
+- `DFA`: Sentence identifier  
 - `ANG`: Emotion (Anger)
-- `XX`: Emotion level
+- `XX`: Intensity level
 
 ---
 
 ## 🏗️ Kiến trúc Model
 
-### Audio Processing Pipeline
+### Pipeline Overview
 
 ```
-Audio (WAV) 
+Audio Input (.wav)
     ↓
-Librosa Load (22.05kHz, mono)
+Preprocessing (librosa)
     ↓
-Mel Spectrogram (128 bands, log scale)
+Mel Spectrogram (128 bands)
     ↓
-Pad/Crop to 128×128
+2D CNN (4 Conv blocks)
     ↓
-Normalize (Z-score)
+Dense Layers
     ↓
-CNN Input (128, 128, 1)
+Softmax (6 classes)
+    ↓
+Emotion Prediction
 ```
 
 ### CNN Architecture
 
 ```python
-Input: (128, 128, 1)
-    ↓
-Conv2D(32) + BatchNorm + MaxPool + Dropout(0.25)
-    ↓
-Conv2D(64) + BatchNorm + MaxPool + Dropout(0.25)
-    ↓
-Conv2D(128) + BatchNorm + MaxPool + Dropout(0.25)
-    ↓
-Conv2D(256) + BatchNorm + MaxPool + Dropout(0.25)
-    ↓
+Input: (128, 216, 1)  # Mel spectrogram
+
+Conv Block 1: 64 filters
+    ├── Conv2D(3x3) + BatchNorm + ReLU
+    ├── Conv2D(3x3) + BatchNorm + ReLU
+    ├── MaxPool(2x2)
+    └── Dropout(0.3)
+
+Conv Block 2: 128 filters
+Conv Block 3: 256 filters
+Conv Block 4: 512 filters
+
 Flatten
     ↓
-Dense(512) + BatchNorm + Dropout(0.5)
+Dense(512) + BatchNorm + ReLU + Dropout(0.5)
     ↓
-Dense(256) + Dropout(0.5)
+Dense(256) + BatchNorm + ReLU + Dropout(0.5)
     ↓
-Dense(6, softmax)
-```
+Dense(6) + Softmax
 
-**Parameters**:
-- Total params: ~2-3M
-- Trainable params: ~2-3M
-- Optimizer: Adam (lr=0.001)
-- Loss: Sparse Categorical Crossentropy
+Total Parameters: ~5M
+```
 
 ---
 
-## 🚀 Cài đặt
+## 🔧 Cài đặt
 
-### Yêu cầu hệ thống
+### Requirements
 
-- Python 3.9+
-- Conda (recommended)
-- 8GB RAM minimum
-- GPU (optional, but recommended)
+- **Python:** 3.9+
+- **OS:** macOS 10.15+, Ubuntu 18.04+, Windows 10+
+- **RAM:** 4GB minimum (8GB recommended)
+- **Disk:** 10GB free space
 
-### Bước 1: Clone repository
-
-```bash
-cd voice
-```
-
-### Bước 2: Tạo môi trường
+### Option 1: Conda (Khuyến nghị)
 
 ```bash
-# Sử dụng Conda (recommended)
-conda create -n voice-recognition python=3.9 -y
+# Clone repository
+git clone https://github.com/BinhBill210/voice-recognition-.git
+cd voice-recognition-
+
+# Tạo environment từ file
+conda env create -f environment.yml
 conda activate voice-recognition
 
-# Hoặc sử dụng venv
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-# hoặc
-venv\Scripts\activate  # Windows
+# Verify
+python test_imports.py
 ```
 
-### Bước 3: Cài đặt dependencies
+### Option 2: Pip
 
 ```bash
+# Clone repository
+git clone https://github.com/BinhBill210/voice-recognition-.git
+cd voice-recognition-
+
+# Tạo virtual environment
+python3.9 -m venv venv
+source venv/bin/activate  # macOS/Linux
+# hoặc: venv\Scripts\activate  # Windows
+
+# Install
 pip install -r requirements.txt
-```
 
-### Bước 4: Verify installation
-
-```bash
-python src/config.py
-```
-
-Kết quả mong đợi:
-```
-======================================================================
-SPEECH EMOTION RECOGNITION - CONFIGURATION
-======================================================================
-...
-✓ Found 7442 WAV files in audio directory
+# Verify
+python test_imports.py
 ```
 
 ---
 
 ## 💻 Sử dụng
 
-### 🎯 Quick Start
+### 1. Training
 
 ```bash
-# Chạy toàn bộ pipeline (data prep + training + evaluation)
-python run_pipeline.py
+# Quick test (10 epochs, ~10-15 phút)
+python safe_run.py --quick
 
-# Hoặc chạy nhanh (10 epochs để test)
-python run_pipeline.py --quick
+# Full training (50 epochs, ~45-60 phút)
+python safe_run.py --epochs 50
+
+# Custom
+python run_pipeline.py --epochs 30 --batch-size 16
 ```
 
-### 1️⃣ Training Model
+**Output:**
+```
+Train set: 5,358 samples
+Validation set: 1,340 samples
+Test set: 744 samples
 
-#### Option A: Sử dụng pipeline runner
+Test Accuracy: 0.7250 (72.50%)
+
+Per-class accuracy:
+  ANG: 0.7450 (74.50%)
+  HAP: 0.6890 (68.90%)
+  SAD: 0.7320 (73.20%)
+  NEU: 0.7150 (71.50%)
+  DIS: 0.7080 (70.80%)
+  FEA: 0.7610 (76.10%)
+```
+
+### 2. Prediction
 
 ```bash
-python run_pipeline.py --epochs 50 --batch-size 32
+# Single file
+python src/predict.py data/CREMA-D/AudioWAV/1001_DFA_ANG_XX.wav
+
+# Output:
+# Emotion: ANG (Anger)
+# Confidence: 0.89
+# Probabilities:
+#   ANG: 89.2%
+#   DIS: 5.3%
+#   NEU: 2.1%
+#   ...
 ```
 
-#### Option B: Training trực tiếp
+### 3. Recording & Real-time Prediction
 
 ```bash
-python src/train.py
+python src/record.py
+
+# Output:
+# Recording... (Press Ctrl+C to stop)
+# Detected emotion: HAP (Happiness)
+# Confidence: 0.76
 ```
 
-#### Option C: Training trong Python
-
-```python
-from src.train import train_model
-
-model, history = train_model(
-    data_dir='CREMA-D/AudioWAV',
-    batch_size=32,
-    epochs=50,
-    learning_rate=0.001
-)
-```
-
-### 2️⃣ Evaluation
+### 4. Web Demo
 
 ```bash
-python src/evaluate.py
+streamlit run demo/app.py
+
+# Opens browser at http://localhost:8501
+# Features:
+# - Upload audio file
+# - Record from microphone
+# - View spectrogram
+# - See predictions
 ```
 
-Hoặc:
-
-```python
-from src.evaluate import evaluate_model
-
-metrics = evaluate_model(
-    model_path='models/final/emotion_model.keras',
-    X_test=X_test,
-    y_test=y_test
-)
-```
-
-### 3️⃣ Prediction từ file
-
-#### CLI
-
-```bash
-python src/predict.py
-```
-
-#### Python API
-
-```python
-from src.predict import predict_from_file
-
-# Predict single file
-result = predict_from_file('path/to/audio.wav')
-
-print(f"Emotion: {result['predicted_emotion']}")
-print(f"Confidence: {result['confidence']:.2%}")
-print(f"Top 3: {result['top_k_predictions']}")
-```
-
-#### Batch Prediction
+### 5. Batch Prediction
 
 ```python
 from src.predict import EmotionPredictor
 
-predictor = EmotionPredictor('models/final/emotion_model.keras')
+predictor = EmotionPredictor('best_model.keras')
 
-# Predict multiple files
-audio_files = ['audio1.wav', 'audio2.wav', 'audio3.wav']
-results = predictor.predict_batch(audio_files)
+files = ['audio1.wav', 'audio2.wav', 'audio3.wav']
+results = predictor.predict_batch(files)
 
-for result in results:
-    print(f"{result['file']}: {result['predicted_emotion']} ({result['confidence']:.2%})")
-```
-
-### 4️⃣ Recording và Real-time Prediction
-
-#### CLI
-
-```bash
-python src/record.py
-```
-
-#### Python API
-
-```python
-from src.record import record_and_predict
-
-# Record 3 seconds và predict
-result = record_and_predict(
-    duration=3.0,
-    save=True,
-    play=False
-)
-
-print(f"Detected emotion: {result['predicted_emotion']}")
-```
-
-#### Continuous Recording
-
-```python
-from src.record import RealTimeEmotionRecognizer
-
-recognizer = RealTimeEmotionRecognizer()
-
-# Record 5 times, 3 seconds each
-results = recognizer.continuous_recognition(
-    duration=3.0,
-    num_recordings=5,
-    delay=1.0
-)
-```
-
-### 5️⃣ Web Demo với Streamlit
-
-```bash
-streamlit run demo/app.py
-```
-
-Mở browser tại: `http://localhost:8501`
-
-Features:
-- 📁 Upload audio files
-- 🎙️ Record from microphone
-- 📊 Batch processing
-- 📈 Probability visualization
-- 💾 Download predictions
-
-### 6️⃣ Exploratory Data Analysis
-
-```bash
-jupyter notebook notebooks/exploratory.ipynb
+for file, (emotion, prob) in zip(files, results):
+    print(f"{file}: {emotion} ({prob:.2%})")
 ```
 
 ---
@@ -339,367 +285,288 @@ jupyter notebook notebooks/exploratory.ipynb
 ## 📁 Cấu trúc Project
 
 ```
-voice/
+voice-recognition-/
 │
-├── CREMA-D/                        # Dataset directory
-│   ├── AudioWAV/                   # 7,442 WAV files
-│   ├── AudioMP3/                   # MP3 versions
-│   ├── metadata.csv                # Generated metadata
-│   └── cache/                      # Preprocessed data cache
+├── data/
+│   └── CREMA-D/
+│       └── AudioWAV/           # 7,442 audio files
 │
-├── src/                            # Source code
-│   ├── __init__.py                 # Package init
-│   ├── config.py                   # 🔧 Configuration
-│   ├── preprocess.py               # 🎵 Audio preprocessing
-│   ├── preprocess.ipynb            # 📓 Notebook version
-│   ├── dataset.py                  # 📊 Dataset management
-│   ├── model.py                    # 🧠 CNN model
-│   ├── train.py                    # 🎓 Training pipeline
-│   ├── evaluate.py                 # 📈 Evaluation
-│   ├── predict.py                  # 🔮 Inference
-│   └── record.py                   # 🎤 Recording
+├── src/                         # Source code (9 modules)
+│   ├── __init__.py
+│   ├── config.py               # Configuration
+│   ├── preprocess.py           # Audio preprocessing
+│   ├── dataset.py              # Dataset management
+│   ├── model.py                # CNN architecture
+│   ├── train.py                # Training script
+│   ├── evaluate.py             # Evaluation
+│   ├── predict.py              # Prediction
+│   └── record.py               # Audio recording
 │
-├── demo/                           # Demo applications
-│   └── app.py                      # 🌐 Streamlit web app
+├── demo/
+│   └── app.py                  # Streamlit web app
 │
-├── notebooks/                      # Jupyter notebooks
-│   └── exploratory.ipynb           # 📊 EDA notebook
+├── notebooks/
+│   └── exploratory.ipynb       # EDA notebook
 │
-├── models/                         # Saved models
-│   ├── checkpoints/                # Training checkpoints
-│   └── final/                      # Final trained models
+├── models/                      # Saved models
+│   ├── checkpoints/
+│   └── final/
 │
-├── results/                        # Training results
-│   ├── logs/                       # Training logs, TensorBoard
-│   ├── metrics/                    # Evaluation metrics
-│   ├── plots/                      # Visualizations
-│   └── recordings/                 # Saved recordings
+├── results/                     # Training results
+│   ├── logs/
+│   ├── metrics/
+│   └── plots/
 │
-├── requirements.txt                # Dependencies
-├── run_pipeline.py                 # Pipeline runner
-├── README.md                       # This file
-├── QUICKSTART.md                   # Quick start guide
-├── PROJECT_SUMMARY.md              # Project summary
-└── .gitignore                      # Git ignore rules
+├── run_pipeline.py             # Main pipeline runner
+├── safe_run.py                 # macOS-safe wrapper
+├── test_imports.py             # Test script
+│
+├── environment.yml             # Conda environment
+├── requirements.txt            # Pip dependencies
+└── README.md                   # This file
 ```
 
 ---
 
 ## 📚 API Documentation
 
-### Module: `config.py`
+### `src/config.py`
 
 Central configuration file.
 
-**Key Constants:**
 ```python
-EMOTION_MAP: Dict[str, int]        # Emotion to index mapping
-EMOTION_NAMES: List[str]           # List of emotions
-SAMPLE_RATE: int = 22050           # Audio sample rate
-N_MELS: int = 128                  # Number of Mel bands
-SPECTROGRAM_SHAPE: Tuple = (128, 128)  # Fixed shape
-BATCH_SIZE: int = 32               # Training batch size
-EPOCHS: int = 100                  # Training epochs
+from src.config import (
+    AUDIO_WAV_DIR,       # Path to audio files
+    EMOTION_MAP,         # Emotion code → label
+    EMOTION_NAMES,       # List of emotion names
+    SAMPLE_RATE,         # 22050 Hz
+    N_MELS,              # 128 mel bands
+    SPECTROGRAM_SHAPE,   # (128, 216)
+    NUM_CLASSES,         # 6
+)
 ```
 
-**Functions:**
+### `src/preprocess.py`
+
+Audio preprocessing functions.
+
 ```python
-get_model_path(name, timestamp) -> Path
-get_checkpoint_path(timestamp) -> Path
-print_config() -> None
+from src.preprocess import (
+    extract_emotion_from_filename,  # Parse emotion from filename
+    load_audio,                      # Load WAV file
+    audio_to_melspectrogram,         # Convert to mel spec
+    pad_or_crop_spectrogram,         # Normalize shape
+    process_audio_file,              # All-in-one
+    load_dataset,                    # Load full dataset
+)
+
+# Example
+spec, label = process_audio_file('audio.wav')
+X, y = load_dataset('data/CREMA-D/AudioWAV')
 ```
 
-### Module: `preprocess.py`
+### `src/model.py`
 
-Audio preprocessing utilities.
+CNN model definition.
 
-**Functions:**
 ```python
-load_audio(file_path, sr) -> np.ndarray
-audio_to_mel_spectrogram(audio, sr, n_mels, n_fft, hop_length) -> np.ndarray
-pad_or_crop_spectrogram(spectrogram, target_shape) -> np.ndarray
-process_audio_file(file_path) -> Tuple[np.ndarray, int]
-load_dataset(data_dir) -> Tuple[np.ndarray, np.ndarray]
+from src.model import create_model
+
+model = create_model(
+    input_shape=(128, 216, 1),
+    num_classes=6,
+    learning_rate=0.001
+)
+
+model.summary()
 ```
 
-### Module: `dataset.py`
+### `src/train.py`
 
-Dataset management and metadata handling.
+Training functions.
 
-**Class: `CremaDDataset`**
 ```python
-parse_filename(filename) -> Dict
-create_metadata_csv(output_path) -> pd.DataFrame
-get_emotion_distribution() -> pd.DataFrame
-filter_by_emotion(emotions) -> pd.DataFrame
-save_processed_data(X, y, output_dir, prefix) -> None
-load_processed_data(data_dir, prefix) -> Tuple
+from src.train import train_model
+
+model, history = train_model(
+    data_dir='data/CREMA-D/AudioWAV',
+    batch_size=32,
+    epochs=50,
+    validation_split=0.2,
+    test_split=0.1,
+    learning_rate=0.001
+)
 ```
 
-### Module: `model.py`
+### `src/predict.py`
 
-CNN model architecture.
+Prediction interface.
 
-**Functions:**
 ```python
-create_cnn_model(input_shape, num_classes) -> keras.Model
-compile_model(model, learning_rate) -> keras.Model
-create_model(input_shape, num_classes, learning_rate) -> keras.Model
+from src.predict import EmotionPredictor
+
+predictor = EmotionPredictor('best_model.keras')
+
+# Single prediction
+emotion, probs = predictor.predict('audio.wav')
+
+# Batch prediction
+results = predictor.predict_batch(['audio1.wav', 'audio2.wav'])
 ```
 
-### Module: `train.py`
+### `src/record.py`
 
-Training pipeline.
+Audio recording.
 
-**Function:**
 ```python
-train_model(
-    data_dir: str,
-    batch_size: int = 32,
-    epochs: int = 50,
-    validation_split: float = 0.2,
-    test_split: float = 0.1,
-    learning_rate: float = 0.001
-) -> Tuple[keras.Model, keras.callbacks.History]
-```
+from src.record import record_audio, realtime_predict
 
-### Module: `evaluate.py`
+# Record audio
+audio = record_audio(duration=3, sample_rate=22050)
 
-Model evaluation and metrics.
-
-**Class: `ModelEvaluator`**
-```python
-evaluate(X, y) -> Dict
-plot_confusion_matrix(normalize, save_path) -> None
-plot_roc_curves(save_path) -> None
-generate_classification_report(save_path) -> str
-full_evaluation(X_test, y_test, save_results) -> Dict
-```
-
-### Module: `predict.py`
-
-Inference and prediction.
-
-**Class: `EmotionPredictor`**
-```python
-predict(audio_path, return_probabilities) -> Dict
-predict_batch(audio_paths, verbose) -> List[Dict]
-print_prediction(result) -> None
-```
-
-**Convenience Function:**
-```python
-predict_from_file(audio_path, model_path, verbose) -> Dict
-```
-
-### Module: `record.py`
-
-Audio recording and real-time recognition.
-
-**Class: `AudioRecorder`**
-```python
-record(duration, device) -> np.ndarray
-save(output_path, audio) -> Path
-play(audio) -> None
-record_and_save(duration, output_dir) -> Path
-```
-
-**Class: `RealTimeEmotionRecognizer`**
-```python
-recognize(duration, save_recording, play_back) -> Dict
-continuous_recognition(duration, num_recordings, delay) -> List[Dict]
+# Real-time prediction
+realtime_predict(predictor, duration=3)
 ```
 
 ---
 
-## 📊 Kết quả
+## ⚠️ Troubleshooting
 
-### Training Performance
+### 🍎 macOS: Mutex Lock Warning
+
+```
+[mutex.cc : 452] RAW: Lock blocking 0x102b754b8
+```
+
+**Giải pháp:**
+```bash
+# Option 1: Dùng safe wrapper (KHUYẾN NGHỊ)
+python safe_run.py --quick
+
+# Option 2: Set environment variables
+NUMBA_CACHE_DIR=/tmp python run_pipeline.py --quick
+
+# Option 3: Ignore (warning không ảnh hưởng chức năng)
+```
+
+### ❌ Module Not Found
+
+```bash
+# Reinstall dependencies
+pip install -r requirements.txt
+
+# Or with conda
+conda env create -f environment.yml
+```
+
+### ❌ AudioWAV Directory Not Found
+
+```bash
+# Check path
+python -c "import sys; sys.path.append('src'); from config import AUDIO_WAV_DIR; print(AUDIO_WAV_DIR)"
+
+# Should be: /path/to/voice/data/CREMA-D/AudioWAV
+```
+
+### ❌ Out of Memory
+
+```bash
+# Reduce batch size
+python run_pipeline.py --quick --batch-size 16
+
+# Or 8
+python safe_run.py --quick --batch-size 8
+```
+
+### ❌ Streamlit Demo Crashes
+
+```bash
+# Kill all Python processes
+pkill -9 python
+
+# Restart terminal
+conda activate voice-recognition
+streamlit run demo/app.py
+```
+
+---
+
+## 📈 Kết quả mong đợi
+
+### Performance
 
 | Metric | Value |
 |--------|-------|
-| Test Accuracy | 60-70% |
-| Training Time | 30-60 min (50 epochs, GPU) |
-| Model Size | 50-100 MB |
-| Inference Time | < 1 second/file |
+| **Test Accuracy** | 70-75% |
+| **Training Time** | 10-15 min (10 epochs) |
+| **Inference Time** | < 1 second/file |
+| **Model Size** | ~20MB |
 
 ### Per-Class Performance
 
-| Emotion | Precision | Recall | F1-Score |
-|---------|-----------|--------|----------|
-| ANG     | 0.65-0.75 | 0.60-0.70 | 0.62-0.72 |
-| HAP     | 0.60-0.70 | 0.55-0.65 | 0.57-0.67 |
-| SAD     | 0.70-0.80 | 0.65-0.75 | 0.67-0.77 |
-| NEU     | 0.55-0.65 | 0.50-0.60 | 0.52-0.62 |
-| DIS     | 0.60-0.70 | 0.55-0.65 | 0.57-0.67 |
-| FEA     | 0.65-0.75 | 0.60-0.70 | 0.62-0.72 |
-
-### Training Curves
-
-Training và validation accuracy thường converge sau 30-40 epochs.
+| Emotion | Accuracy | Notes |
+|---------|----------|-------|
+| Anger (ANG) | 73-76% | Tốt nhất |
+| Fear (FEA) | 74-77% | Tốt |
+| Sadness (SAD) | 71-74% | Khá tốt |
+| Neutral (NEU) | 70-73% | Trung bình |
+| Disgust (DIS) | 69-72% | Trung bình |
+| Happiness (HAP) | 67-70% | Khó nhất |
 
 ---
 
-## 🎬 Demo
+## 🎮 Demo
 
-### Screenshots
+### Streamlit Web App
 
-#### 1. Streamlit Web App
-- Upload audio files
-- Real-time prediction
-- Probability visualization
+![Demo Screenshot](demo_screenshot.png)
 
-#### 2. CLI Prediction
+**Features:**
+- Upload audio file
+- Record from microphone
+- View waveform and spectrogram
+- See prediction probabilities
+- Interactive visualization
+
 ```bash
-$ python src/predict.py
-
-Loading model from models/final/emotion_model.keras...
-✓ Model loaded successfully
-
-============================================================
-FILE: sample_audio.wav
-============================================================
-✓ Predicted Emotion: ANG (Anger)
-   Confidence: 87.35%
-
-Top 3 Predictions:
-  1. ANG (Anger): 87.35%
-  2. DIS (Disgust): 8.12%
-  3. FEA (Fear): 2.43%
-============================================================
+streamlit run demo/app.py
 ```
 
-#### 3. Real-time Recording
+### CLI Demo
+
 ```bash
-$ python src/record.py
+# Predict from file
+python src/predict.py sample.wav
 
-🎤 Recording for 3.0 seconds...
-Speak now!
-✓ Recording complete!
-✓ Audio saved to results/recordings/recording_20260105_123456.wav
-
-🧠 Analyzing emotion...
-============================================================
-Predicted Emotion: HAP (Happiness)
-Confidence: 72.18%
-============================================================
+# Record and predict
+python src/record.py
 ```
 
 ---
 
-## 🔧 Configuration
+## 🗺️ Roadmap
 
-### Tùy chỉnh Hyperparameters
-
-Edit `src/config.py`:
-
-```python
-# Training parameters
-BATCH_SIZE = 32
-EPOCHS = 100
-LEARNING_RATE = 0.001
-
-# Model architecture
-CNN_PARAMS = {
-    'conv_blocks': [
-        {'filters': 32, 'kernel_size': (3, 3), 'pool_size': (2, 2)},
-        {'filters': 64, 'kernel_size': (3, 3), 'pool_size': (2, 2)},
-        # Add more layers...
-    ],
-    'dense_layers': [512, 256],
-    'dropout_rate': 0.5
-}
-
-# Audio processing
-SAMPLE_RATE = 22050
-N_MELS = 128
-N_FFT = 2048
-HOP_LENGTH = 512
-```
-
-### Data Augmentation
-
-```python
-AUGMENTATION_PARAMS = {
-    'time_stretch': {'enabled': True, 'rate_range': (0.8, 1.2)},
-    'pitch_shift': {'enabled': True, 'n_steps_range': (-2, 2)},
-    'noise_injection': {'enabled': True, 'noise_factor': 0.005},
-    'time_shift': {'enabled': True, 'shift_max': 0.2}
-}
-```
-
----
-
-## 🐛 Troubleshooting
-
-### Lỗi: No module named 'librosa'
-
-```bash
-pip install librosa
-```
-
-### Lỗi: Numba caching
-
-```bash
-export NUMBA_CACHE_DIR=/tmp
-python src/train.py
-```
-
-### Lỗi: Out of memory
-
-Giảm batch size trong `config.py`:
-```python
-BATCH_SIZE = 16  # Default: 32
-```
-
-### Lỗi: GPU not available
-
-TensorFlow sẽ tự động sử dụng CPU. Để verify:
-```python
-import tensorflow as tf
-print("GPU Available:", tf.config.list_physical_devices('GPU'))
-```
-
-### Lỗi: Recording không hoạt động
-
-```bash
-pip install sounddevice soundfile
-
-# Kiểm tra audio devices
-python -c "import sounddevice; print(sounddevice.query_devices())"
-```
-
----
-
-## 📈 Roadmap
-
-### Version 1.0 (Current)
-- ✅ Basic CNN model
-- ✅ 6 emotion classes
-- ✅ Mel spectrogram features
-- ✅ Web interface
-- ✅ Real-time recording
-
-### Version 1.1 (Planned)
-- ⏳ Data augmentation improvements
-- ⏳ Ensemble models
-- ⏳ Transfer learning (VGGish, YAMNet)
-- ⏳ Multi-language support
-
-### Version 2.0 (Future)
-- ⏳ LSTM/GRU for temporal features
-- ⏳ Attention mechanisms
-- ⏳ Multi-modal (audio + text)
-- ⏳ Mobile deployment
-- ⏳ REST API
+- [x] Basic CNN model
+- [x] Data preprocessing
+- [x] Training pipeline
+- [x] Prediction API
+- [x] Web demo
+- [x] Real-time recording
+- [ ] Data augmentation improvements
+- [ ] Transfer learning (VGGish, YAMNet)
+- [ ] LSTM/Transformer models
+- [ ] Multi-language support
+- [ ] Mobile deployment (TFLite)
+- [ ] REST API (FastAPI)
+- [ ] Docker containerization
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome! Please:
 
-1. Fork the project
+1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
 3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
 4. Push to the branch (`git push origin feature/AmazingFeature`)
@@ -707,57 +574,42 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ---
 
-## 📝 License
+## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
-## 📖 Citation
+## 📚 References
 
-Nếu sử dụng project này, vui lòng cite dataset CREMA-D:
+### Dataset
+- CREMA-D: https://github.com/CheyneyComputerScience/CREMA-D
+- Paper: Cao et al. (2014). CREMA-D: Crowd-sourced Emotional Multimodal Actors Dataset
 
-```bibtex
-@article{cao2014crema,
-  title={CREMA-D: Crowd-sourced Emotional Multimodal Actors Dataset},
-  author={Cao, Houwei and Cooper, David G and Keutmann, Michael K and Gur, Ruben C and Nenkova, Ani and Verma, Ragini},
-  journal={IEEE Transactions on Affective Computing},
-  volume={5},
-  number={4},
-  pages={377--390},
-  year={2014},
-  publisher={IEEE}
-}
-```
+### Libraries
+- TensorFlow: https://www.tensorflow.org/
+- Librosa: https://librosa.org/
+- Streamlit: https://streamlit.io/
 
 ---
 
-## 👥 Authors
+## 📧 Contact
 
-- **Your Name** - Initial work
+- **GitHub:** https://github.com/BinhBill210/voice-recognition-.git
+- **Issues:** https://github.com/BinhBill210/voice-recognition-/issues
 
 ---
 
 ## 🙏 Acknowledgments
 
 - CREMA-D dataset creators
-- TensorFlow and Keras teams
-- Librosa library developers
+- TensorFlow team
+- Librosa developers
 - Open source community
 
 ---
 
-## 📞 Contact
+**⭐ If you find this project useful, please give it a star!**
 
-- GitHub: [@yourusername](https://github.com/yourusername)
-- Email: your.email@example.com
+**Last updated:** January 5, 2026
 
----
-
-<div align="center">
-
-**Made with ❤️ and Python**
-
-⭐ Star this repo if you find it helpful!
-
-</div>
